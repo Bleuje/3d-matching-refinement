@@ -145,7 +145,7 @@ namespace m3d {
         for(it=here.begin();it!=here.end();it++){
             int k = *it;
             float difference = abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]);
-            res2 -= 0.1*100000*(difference<0.01)*(1+5*isGood[k]);
+            res2 -= 0.1*100000*(difference<0.01)*(1+5*isCorrect[k]);
             cnt++;
         }
         return res/SAMPLE_SIZE + 0.2*(cnt>0?res2/cnt:0);
@@ -165,7 +165,7 @@ namespace m3d {
             int k = *it;
             //float difference = abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]);
             float difference = 0;
-            res2 -= 0.1*100000*(difference<0.01)*(1+5*isGood[k]);
+            res2 -= 0.1*100000*(difference<0.01)*(1+5*isCorrect[k]);
             cnt++;
         }
         return res/SAMPLE_SIZE + 0.1*(cnt>0?res2/cnt:0);
@@ -210,12 +210,12 @@ namespace m3d {
 
             set<int> here2;
 
-            isGood[i]=(evaluateLarge(i,here)<100000*0.01);
+            isCorrect[i]=(evaluateLarge(i,here)<100000*0.01);
         }
     }
 
     //Labels some vertices as good
-    void MeshCorrespondence::findGood(const int& nSteps){
+    void MeshCorrespondence::findCorrect(const int& nSteps){
         for(int k=0;k<nSteps;k++){
             int i = rand()%(mesh1.n);
 
@@ -227,8 +227,8 @@ namespace m3d {
 
             int theMin = evaluateLarge(i,emp);
 
-            isGood[i]=(theMin<100000*0.01);
-            isGood[i]=0;
+            isCorrect[i]=(theMin<100000*0.01);
+            isCorrect[i]=0;
         }
     }
 
@@ -320,7 +320,7 @@ namespace m3d {
         setSampling();
 
         vector<bool> test(mesh1.n,0);
-        isGood = test;
+        isCorrect = test;
     }
 
     //Computes geodesic distances on both meshes

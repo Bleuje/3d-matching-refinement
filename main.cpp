@@ -18,7 +18,7 @@ using namespace m3d;
 const string pathMesh = "C:/Users/Etienne/Desktop/before_mincut/meshes/";
 ///Initial correpondances location
 const string pathCorr = "C:/Users/Etienne/Desktop/before_mincut/data/";
-///Mesh name (wuthout the prefix index)
+///Mesh name (without the prefix index)
 const string prefix = "gtfaustoff_all";
 
 int main(){
@@ -41,7 +41,7 @@ int main(){
     ///Algorithm steps
     for(int k=1;k<=100;k++){
         cout << "1000 steps No." << k << "\n"<<flush;
-        MC.findGood(15000);
+        MC.findCorrect(15000);
         cout << MC.globalEval() << endl;
         MC.optimize(1000);
         cout << MC.globalEval() << endl;

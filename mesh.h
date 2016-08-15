@@ -55,7 +55,7 @@ namespace m3d {
         int id1;
         int id2;
         Environment env;
-        vector<bool> isGood;
+        vector<bool> isCorrect;
         vector<int> samplingVec;
         vector<int> samplingVecLarge;
         map<int,int> indexS;
@@ -70,7 +70,7 @@ namespace m3d {
         long long evaluate(const int& p,const set<int>& here);
         long long evaluateLarge(const int& p,const set<int>& here);
         void optimize(const int& nSteps);
-        void findGood(const int& nSteps);
+        void findCorrect(const int& nSteps);
         void showGroundTruthError(const string& name);
         void showGeodesicError(const string& name);
         void dijkstra();
