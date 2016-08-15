@@ -2,15 +2,18 @@
 
 namespace m3d {
 
+    //Mesh constructor
     Mesh::Mesh()
     {
 
     }
 
+    //Euclidian distances between two vertices given by their index
     float Mesh::shortDist(const int& i1,const int& i2){
         return sqrt((vert[i1][0]-vert[i2][0])*(vert[i1][0]-vert[i2][0]) + (vert[i1][1]-vert[i2][1])*(vert[i1][1]-vert[i2][1]) + (vert[i1][2]-vert[i2][2])*(vert[i1][2]-vert[i2][2]));
     }
 
+    //Tell if the arc to val is new (from vertex v)
     bool Mesh::isNew(const int& v,const int& val){
         for(int i=0;i<int(graphMesh[v].size());i++){
             if(graphMesh[v][i]==val){
@@ -20,7 +23,7 @@ namespace m3d {
         return true;
     }
 
-
+    //Function to load a mesh
     void Mesh::load(const string& path,const string& name){
         string filepath = path + name + ".off";
         ifstream in (filepath);
@@ -48,6 +51,8 @@ namespace m3d {
         }
     }
 
+    //Bread-first search from start on the graph of the mesh.
+    //Ends when nb vertices have been found, and returns the set of visited points.
     inline set<int> Mesh::bfs(const int& start,const int& nb){
         set<int> res;
         vector<bool> visited(n,0);
@@ -71,6 +76,7 @@ namespace m3d {
         return res;
     }
 
+    //Fill the array of geodesic distances from the vertex "start" using dijkstra (with priority queue, O(M*log(M+N)) complexity I think)
     void Mesh::dijkstraFill(const int& start){
         for(int i=0;i<n;i++){
             geoDistances[start][i][type] = INFINITE;
@@ -100,13 +106,15 @@ namespace m3d {
         }
     }
 
+    //Computes all the geodesic distances between all points of the mesh using the previous function
     void Mesh::dijkstraFillEverything(){
         for(int i=0;i<n;i++){
             dijkstraFill(i);
         }
     }
 
-    float MeshCorrespondance::simpleGlobalEval(){
+    //Useless evaluation that uses euclidian distance instead of geodesic distance
+    float MeshCorrespondence::simpleGlobalEval(){
         double res = 0;
         for(int i=0;i<mesh1.n;i++){
             res += mesh2.shortDist(i,corr[i])/mesh1.n;
@@ -114,7 +122,9 @@ namespace m3d {
         return res;
     }
 
-    float MeshCorrespondance::globalEval(){
+    //Evaluation by comparison with ground truth, using geodesic distances between the predicted point and the real correspondence,
+    //for each point of the first mesh, on the second mesh.
+    float MeshCorrespondence::globalEval(){
         double res = 0;
         for(int i=0;i<mesh1.n;i++){
             res += geoDistances[i][corr[i]][1]/mesh1.n;
@@ -122,11 +132,12 @@ namespace m3d {
         return res;
     }
 
-    long long MeshCorrespondance::evaluate(const int& p,const set<int>& here){
+    //Heuristic to evaluate the quality of a point
+    long long MeshCorrespondence::evaluate(const int& p,const set<int>& here){
         long long res = 0;
         for(int i=0;i<SAMPLE_SIZE;i++){
             int k = samplingVec[i];
-            res+=100000*min((float)0.10,(float)abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]))*(1.0-0.75*here.count(k));
+            res+=100000*min((float)0.10,(float)abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]))*(1.0-0.5*here.count(k));
         }
         long long res2 = 0;
         int cnt = 0;
@@ -140,7 +151,8 @@ namespace m3d {
         return res/SAMPLE_SIZE + 0.2*(cnt>0?res2/cnt:0);
     }
 
-    long long MeshCorrespondance::evaluateLarge(const int& p,const set<int>& here){
+    //Same with more points
+    long long MeshCorrespondence::evaluateLarge(const int& p,const set<int>& here){
         long long res = 0;
         for(int i=0;i<SAMPLE_SIZE;i++){
             int k = samplingVecLarge[i];
@@ -159,7 +171,8 @@ namespace m3d {
         return res/SAMPLE_SIZE + 0.1*(cnt>0?res2/cnt:0);
     }
 
-    void MeshCorrespondance::optimize(const int& nSteps){
+    //Function that uses the heursitics to change the correspondence
+    void MeshCorrespondence::optimize(const int& nSteps){
         for(int k=0;k<nSteps;k++){
             int i = rand()%(mesh1.n);
 
@@ -201,7 +214,8 @@ namespace m3d {
         }
     }
 
-    void MeshCorrespondance::findGood(const int& nSteps){
+    //Labels some vertices as good
+    void MeshCorrespondence::findGood(const int& nSteps){
         for(int k=0;k<nSteps;k++){
             int i = rand()%(mesh1.n);
 
@@ -218,12 +232,10 @@ namespace m3d {
         }
     }
 
-
-    void MeshCorrespondance::showGroundTruthError(const string& name){
+    //Creates a mesh to visualize the error compared to Ground-Truth
+    void MeshCorrespondence::showGroundTruthError(const string& name){
         string filepath = env.pathMesh + env.prefix + to_string(id1) + "_" + to_string(id2) + "_" + name + "_error.off";
         ofstream out (filepath);
-
-        vector<bool> state(mesh1.n,0);
 
         vector<float> error(mesh1.n,0);
 
@@ -231,7 +243,6 @@ namespace m3d {
         for(int i=0;i<mesh1.n;i++){
             error[i]=geoDistances[i][corr[i]][1];
         }
-        //sort(pointsVec.begin(),pointsVec.end());
 
         out<<"OFF\n";
 
@@ -255,7 +266,8 @@ namespace m3d {
         }
     }
 
-    void MeshCorrespondance::showGeodesicError(const string& name){
+    //Creates a mesh to visualize the deformation error
+    void MeshCorrespondence::showGeodesicError(const string& name){
         string filepath = env.pathMesh + env.prefix + to_string(id1) + "_" + to_string(id2) + "_" + name + "_error2.off";
         ofstream out (filepath);
 
@@ -289,7 +301,8 @@ namespace m3d {
         }
     }
 
-    MeshCorrespondance::MeshCorrespondance(const string &pm, const string &pc, const string &pf, const int& k1, const int& k2){
+    //Constructor
+    MeshCorrespondence::MeshCorrespondence(const string &pm, const string &pc, const string &pf, const int& k1, const int& k2){
         env.pathMesh = pm;
         env.pathCorr = pc;
         env.prefix = pf;
@@ -310,12 +323,14 @@ namespace m3d {
         isGood = test;
     }
 
-    void MeshCorrespondance::dijkstra(){
+    //Computes geodesic distances on both meshes
+    void MeshCorrespondence::dijkstra(){
         mesh1.dijkstraFillEverything();
         mesh2.dijkstraFillEverything();
     }
 
-    void MeshCorrespondance::setSampling(){
+    //Not important, just selects different point randomly on the first mesh
+    void MeshCorrespondence::setSampling(){
         if(int(samplingVec.size())<=0){
             vector<int> listIndex;
             for(int i=0;i<mesh1.n;i++){
@@ -357,7 +372,8 @@ namespace m3d {
         }
     }
 
-    void MeshCorrespondance::loadCorr(){
+    //Loads a correspondence
+    void MeshCorrespondence::loadCorr(){
         string filepath = env.pathCorr + "corr" + to_string(id1) + "_" + to_string(id2) + ".txt";
         ifstream in (filepath);
 
@@ -372,7 +388,8 @@ namespace m3d {
         }
     }
 
-    void MeshCorrespondance::saveCorr(){
+    //Saves the current correspondence, with a random number in the name to avoid overwriting files
+    void MeshCorrespondence::saveCorr(){
         string filepath = env.pathCorr + env.prefix + "corr" + to_string(id1) + "_" + to_string(id2) + "_" +  to_string(rand()%1000) + ".txt";
         ofstream out (filepath);
 
@@ -383,5 +400,4 @@ namespace m3d {
             out<<corr[i]+1<<" ";
         }
     }
-
 }

@@ -47,7 +47,7 @@ namespace m3d {
         string prefix;
     };
 
-    class MeshCorrespondance
+    class MeshCorrespondence
     {
     private:
         Mesh mesh1;
@@ -64,7 +64,7 @@ namespace m3d {
         vector<int> corr;
 
     public:
-        MeshCorrespondance(const string& pm,const string& pc,const string& pf,const int& k1,const int& k2);
+        MeshCorrespondence(const string& pm,const string& pc,const string& pf,const int& k1,const int& k2);
         float simpleGlobalEval();
         float globalEval();
         long long evaluate(const int& p,const set<int>& here);

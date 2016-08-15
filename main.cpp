@@ -26,7 +26,7 @@ int main(){
     ios_base::sync_with_stdio(0);
 
     ///Load the pair of meshes
-    MeshCorrespondance MC(pathMesh,pathCorr,prefix,38,6);
+    MeshCorrespondence MC(pathMesh,pathCorr,prefix,38,6);
     cout << "loading ok ... \n\n" << flush;
 
     ///Computation of geodesic distances
