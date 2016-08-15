@@ -18,7 +18,7 @@ using namespace m3d;
 const string pathMesh = "C:/Users/Etienne/Desktop/before_mincut/meshes/";
 ///Initial correpondances location
 const string pathCorr = "C:/Users/Etienne/Desktop/before_mincut/data/";
-///Mesh name (without the prefix index)
+///Mesh name (without the postfix index)
 const string prefix = "gtfaustoff_all";
 
 int main(){
