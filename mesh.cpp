@@ -133,45 +133,45 @@ namespace m3d {
     }
 
     //Heuristic to evaluate the quality of a point
-    long long MeshCorrespondence::evaluate(const int& p,const set<int>& here){
-        long long res = 0;
+    inline double MeshCorrespondence::evaluate(const int& p,const set<int>& here){
+        double res = 0;
         for(int i=0;i<SAMPLE_SIZE;i++){
             int k = samplingVec[i];
-            res+=100000*min((float)0.10,(float)abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]))*(1.0-0.5*here.count(k));
+            res+=min(DIFF_MAX,(float)abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]));
         }
-        long long res2 = 0;
-        int cnt = 0;
+        double res2 = 0;
+        int cnt = here.size();
         set<int>::iterator it;
         for(it=here.begin();it!=here.end();it++){
             int k = *it;
             float difference = abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]);
-            res2 -= 0.1*100000*(difference<0.01)*(1+5*isCorrect[k]);
-            cnt++;
+            res2 -= DIFF_MAX*(difference<DIFF_TOLERANCE)*(1+CORRECT_WEIGHT*isCorrect[k]);
+            cnt+=CORRECT_WEIGHT*isCorrect[k];
         }
-        return res/SAMPLE_SIZE + 0.2*(cnt>0?res2/cnt:0);
+        return res/SAMPLE_SIZE + LAMBDA*(cnt>0?res2/cnt:0);
     }
 
     //Same with more points
-    long long MeshCorrespondence::evaluateLarge(const int& p,const set<int>& here){
-        long long res = 0;
+    inline double MeshCorrespondence::evaluateLarge(const int& p,const set<int>& here){
+        double res = 0;
         for(int i=0;i<SAMPLE_SIZE;i++){
             int k = samplingVecLarge[i];
-            res+=100000*min((float)0.10,(float)abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]));
+            res+=min(DIFF_MAX,(float)abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]));
         }
-        long long res2 = 0;
-        int cnt = 0;
+        double res2 = 0;
+        int cnt = here.size();
         set<int>::iterator it;
         for(it=here.begin();it!=here.end();it++){
             int k = *it;
-            //float difference = abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]);
-            float difference = 0;
-            res2 -= 0.1*100000*(difference<0.01)*(1+5*isCorrect[k]);
-            cnt++;
+            float difference = abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]);
+            //float difference = 0;
+            res2 -= DIFF_MAX*(difference<DIFF_TOLERANCE)*(1+CORRECT_WEIGHT*isCorrect[k]);
+            cnt+=CORRECT_WEIGHT*isCorrect[k];
         }
-        return res/SAMPLE_SIZE + 0.1*(cnt>0?res2/cnt:0);
+        return res/SAMPLE_SIZE + LAMBDA*(cnt>0?res2/cnt:0);
     }
 
-    //Function that uses the heursitics to change the correspondence
+    //Function that uses the heuristics to change the correspondence
     void MeshCorrespondence::optimize(const int& nSteps){
         for(int k=0;k<nSteps;k++){
             int i = rand()%(mesh1.n);
@@ -180,14 +180,14 @@ namespace m3d {
                 samplingVec[l]=rand()%mesh1.n;
             }
 
-            set<int> here = mesh1.bfs(i,BFS_NB);
+            set<int> here = mesh1.bfs(i,BFS_NB_HERE);
 
-            int theMin = evaluate(i,here);
+            double theMin = evaluate(i,here);
             int jmin = corr[i];
-            for(int jj=0;jj<300;jj++){
+            for(int jj=0;jj<MESH2_TRIES;jj++){
                 int j = rand()%(mesh2.n);
                 corr[i]=j;
-                int aux = evaluate(i,here);
+                double aux = evaluate(i,here);
                 if(aux<theMin){
                     theMin = aux;
                     jmin=j;
@@ -195,12 +195,23 @@ namespace m3d {
             }
             corr[i]=jmin;
 
-            set<int> there = mesh2.bfs(corr[i],BFS_NB);
+            set<int> there = mesh2.bfs(corr[i],BFS_NB_THERE);
             set<int>::iterator it;
             for(it=there.begin();it!=there.end();it++){
                 int j = *it;
                 corr[i]=j;
-                int aux = evaluate(i,here);
+                double aux = evaluate(i,here);
+                if(aux<theMin){
+                    theMin = aux;
+                    jmin=j;
+                }
+            }
+            corr[i]=jmin;
+
+            for(it=here.begin();it!=here.end();it++){
+                int j = corr[*it];
+                corr[i]=j;
+                double aux = evaluate(i,here);
                 if(aux<theMin){
                     theMin = aux;
                     jmin=j;
@@ -210,7 +221,7 @@ namespace m3d {
 
             set<int> here2;
 
-            isCorrect[i]=(evaluateLarge(i,here)<100000*0.01);
+            isCorrect[i]=(evaluateLarge(i,here)<CORRECT_TOLERANCE);
         }
     }
 
@@ -225,10 +236,10 @@ namespace m3d {
 
             set<int> emp;
 
-            int theMin = evaluateLarge(i,emp);
+            double theMin = evaluateLarge(i,emp);
 
-            isCorrect[i]=(theMin<100000*0.01);
-            isCorrect[i]=0;
+            isCorrect[i]=(theMin<CORRECT_TOLERANCE);
+            //isCorrect[i]=0;
         }
     }
 

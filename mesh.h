@@ -12,11 +12,21 @@ namespace m3d {
 
     const int MAX_SIZE_V = 7000;
     const int MAX_SIZE_T = 15000;
+    const float INFINITE = 1e9;
+
     const int SAMPLE_SIZE = 100;
     const int SAMPLE_SIZE_LARGE = 1000;
-    const float INFINITE = 1e9;
-    const float VOTE_LIM = 0.02;
-    const int BFS_NB = 300;
+    const int BFS_NB_HERE = 20;
+    const int BFS_NB_THERE = 20;
+
+    const float DIFF_TOLERANCE = 0.02;
+    const float CORRECT_TOLERANCE = 0.01;
+    const float DIFF_MAX = 0.1;
+
+    const int CORRECT_WEIGHT = 0;
+
+    const float LAMBDA = 0.0;
+    const int MESH2_TRIES = 100;
 
     static float geoDistances[MAX_SIZE_V][MAX_SIZE_V][2];
 
@@ -67,8 +77,8 @@ namespace m3d {
         MeshCorrespondence(const string& pm,const string& pc,const string& pf,const int& k1,const int& k2);
         float simpleGlobalEval();
         float globalEval();
-        long long evaluate(const int& p,const set<int>& here);
-        long long evaluateLarge(const int& p,const set<int>& here);
+        double evaluate(const int& p,const set<int>& here);
+        double evaluateLarge(const int& p,const set<int>& here);
         void optimize(const int& nSteps);
         void findCorrect(const int& nSteps);
         void showGroundTruthError(const string& name);
