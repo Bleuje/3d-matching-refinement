@@ -1,9 +1,8 @@
 /*****
-Etienne JACOB, 16/08/2016
+Etienne JACOB, 17/08/2016
 *****
 Off files and correspondences given.
-Trying to find out bad correspondences.
-And trying to correct them.
+Trying to correct given correspondences.
 ---
 C++11 features are used
 *****/
@@ -26,7 +25,8 @@ int main(){
     ios_base::sync_with_stdio(0);
 
     ///Load the pair of meshes
-    MeshCorrespondence MC(pathMesh,pathCorr,prefix,41,1);
+    MeshCorrespondence MC(pathMesh,pathCorr,prefix,"gtfaustoff_allcorr68_60_523",38,6);
+    //MeshCorrespondence MC(pathMesh,pathCorr,prefix,68,60);
     cout << "loading ok ... \n\n" << flush;
 
     ///Computation of geodesic distances
@@ -41,8 +41,6 @@ int main(){
     ///Algorithm steps
     for(int k=1;k<=1000;k++){
         cout << "100 steps No." << k << "\n"<<flush;
-        //MC.findCorrect(1000);
-        //cout << MC.globalEval() << endl;
         MC.optimize(100);
         cout << MC.globalEval() << endl;
     }

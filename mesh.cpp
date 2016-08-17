@@ -113,15 +113,6 @@ namespace m3d {
         }
     }
 
-    //Useless evaluation that uses euclidian distance instead of geodesic distance
-    float MeshCorrespondence::simpleGlobalEval(){
-        double res = 0;
-        for(int i=0;i<mesh1.n;i++){
-            res += mesh2.shortDist(i,corr[i])/mesh1.n;
-        }
-        return res;
-    }
-
     //Evaluation by comparison with ground truth, using geodesic distances between the predicted point and the real correspondence,
     //for each point of the first mesh, on the second mesh.
     float MeshCorrespondence::globalEval(){
@@ -132,43 +123,42 @@ namespace m3d {
         return res;
     }
 
+    float MeshCorrespondence::globalEvalGeo(){
+        double res = 0;
+        int cnt = 0;
+        for(int j=0;j<int(samplingVec.size());j++){
+            int p = samplingVec[j];
+            for(int i=0;i<int(samplingVec.size());i++){
+                int k = samplingVec[i];
+                res+=rho(geoDistances[k][p][0],geoDistances[corr[k]][corr[p]][1]);
+                cnt++;
+            }
+        }
+        return res/cnt;
+    }
+
+    inline double MeshCorrespondence::rho(const double& x,const double& y){
+        return exp(-min(x,y)/PARAM_B)*min(DIFF_MAX,(float)abs(x-y));
+    }
+
     //Heuristic to evaluate the quality of a point
     inline double MeshCorrespondence::evaluate(const int& p,const set<int>& here){
         double res = 0;
-        for(int i=0;i<SAMPLE_SIZE;i++){
+        for(int i=0;i<int(samplingVec.size());i++){
             int k = samplingVec[i];
-            res+=min(DIFF_MAX,(float)abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]));
+            res+=rho(geoDistances[k][p][0],geoDistances[corr[k]][corr[p]][1]);
         }
         double res2 = 0;
         int cnt = here.size();
-        set<int>::iterator it;
-        for(it=here.begin();it!=here.end();it++){
-            int k = *it;
-            float difference = abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]);
-            res2 -= DIFF_MAX*(difference<DIFF_TOLERANCE)*(1+CORRECT_WEIGHT*isCorrect[k]);
-            cnt+=CORRECT_WEIGHT*isCorrect[k];
+        if(LAMBDA>0.00001){
+            set<int>::iterator it;
+            for(it=here.begin();it!=here.end();it++){
+                int k = *it;
+                float difference = abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]);
+                res2 -= DIFF_MAX*(difference<DIFF_TOLERANCE);
+            }
         }
-        return res/SAMPLE_SIZE + LAMBDA*(cnt>0?res2/cnt:0);
-    }
-
-    //Same with more points
-    inline double MeshCorrespondence::evaluateLarge(const int& p,const set<int>& here){
-        double res = 0;
-        for(int i=0;i<SAMPLE_SIZE;i++){
-            int k = samplingVecLarge[i];
-            res+=min(DIFF_MAX,(float)abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]));
-        }
-        double res2 = 0;
-        int cnt = here.size();
-        set<int>::iterator it;
-        for(it=here.begin();it!=here.end();it++){
-            int k = *it;
-            float difference = abs(geoDistances[k][p][0] - geoDistances[corr[k]][corr[p]][1]);
-            //float difference = 0;
-            res2 -= DIFF_MAX*(difference<DIFF_TOLERANCE)*(1+CORRECT_WEIGHT*isCorrect[k]);
-            cnt+=CORRECT_WEIGHT*isCorrect[k];
-        }
-        return res/SAMPLE_SIZE + LAMBDA*(cnt>0?res2/cnt:0);
+        return res/int(samplingVec.size()) + LAMBDA*(cnt>0?res2/cnt:0);
     }
 
     //Function that uses the heuristics to change the correspondence
@@ -176,9 +166,7 @@ namespace m3d {
         for(int k=0;k<nSteps;k++){
             int i = rand()%(mesh1.n);
 
-            for(int l=0;l<SAMPLE_SIZE;l++){
-                samplingVec[l]=rand()%mesh1.n;
-            }
+            setSampling();
 
             set<int> here = mesh1.bfs(i,BFS_NB_HERE);
 
@@ -195,20 +183,10 @@ namespace m3d {
             }
             corr[i]=jmin;
 
-            set<int> there = mesh2.bfs(corr[i],BFS_NB_THERE);
             set<int>::iterator it;
-            for(it=there.begin();it!=there.end();it++){
-                int j = *it;
-                corr[i]=j;
-                double aux = evaluate(i,here);
-                if(aux<theMin){
-                    theMin = aux;
-                    jmin=j;
-                }
-            }
-            corr[i]=jmin;
 
-            for(it=here.begin();it!=here.end();it++){
+            set<int> here2 = mesh2.bfs(i,BFS_NB_HERE2);
+            for(it=here2.begin();it!=here2.end();it++){
                 int j = corr[*it];
                 corr[i]=j;
                 double aux = evaluate(i,here);
@@ -219,27 +197,17 @@ namespace m3d {
             }
             corr[i]=jmin;
 
-            set<int> here2;
-
-            isCorrect[i]=(evaluateLarge(i,here)<CORRECT_TOLERANCE);
-        }
-    }
-
-    //Labels some vertices as good
-    void MeshCorrespondence::findCorrect(const int& nSteps){
-        for(int k=0;k<nSteps;k++){
-            int i = rand()%(mesh1.n);
-
-            for(int l=0;l<SAMPLE_SIZE;l++){
-                samplingVecLarge[l]=rand()%(mesh1.n);
+            set<int> there = mesh2.bfs(corr[i],BFS_NB_THERE);
+            for(it=there.begin();it!=there.end();it++){
+                int j = *it;
+                corr[i]=j;
+                double aux = evaluate(i,here);
+                if(aux<theMin){
+                    theMin = aux;
+                    jmin=j;
+                }
             }
-
-            set<int> emp;
-
-            double theMin = evaluateLarge(i,emp);
-
-            isCorrect[i]=(theMin<CORRECT_TOLERANCE);
-            //isCorrect[i]=0;
+            corr[i]=jmin;
         }
     }
 
@@ -329,9 +297,24 @@ namespace m3d {
         if(true) loadCorr();
 
         setSampling();
+    }
 
-        vector<bool> test(mesh1.n,0);
-        isCorrect = test;
+    MeshCorrespondence::MeshCorrespondence(const string &pm, const string &pc, const string &pf,const string& corrName, const int& k1, const int& k2){
+        env.pathMesh = pm;
+        env.pathCorr = pc;
+        env.prefix = pf;
+
+        mesh1.load(pm,pf + to_string(k1));
+        mesh1.type = 0;
+        id1 = k1;
+
+        mesh2.load(pm,pf + to_string(k2));
+        mesh2.type = 1;
+        id2 = k2;
+
+        if(true) loadCorrName(corrName);
+
+        setSampling();
     }
 
     //Computes geodesic distances on both meshes
@@ -342,50 +325,44 @@ namespace m3d {
 
     //Not important, just selects different point randomly on the first mesh
     void MeshCorrespondence::setSampling(){
-        if(int(samplingVec.size())<=0){
-            vector<int> listIndex;
-            for(int i=0;i<mesh1.n;i++){
-                listIndex.push_back(i);
-            }
-
-            for(int i=mesh1.n-1;i>=0;i--){
-                int k = rand()%(i+1);
-                int aux = listIndex[i];
-                listIndex[i]=listIndex[k];
-                listIndex[k]=aux;
-            }
-
-            for(int i=0;i<min(int(listIndex.size()),SAMPLE_SIZE);i++){
-                samplingVec.push_back(listIndex[i]);
-                indexS[listIndex[i]]=i;
-            }
-            sort(samplingVec.begin(),samplingVec.end());
+        samplingVec.clear();
+        vector<int> listIndex;
+        for(int i=0;i<mesh1.n;i++){
+            listIndex.push_back(i);
         }
 
-        if(int(samplingVecLarge.size())<=0){
-            vector<int> listIndex;
-            for(int i=0;i<mesh1.n;i++){
-                listIndex.push_back(i);
-            }
-
-            for(int i=mesh1.n-1;i>=0;i--){
-                int k = rand()%(i+1);
-                int aux = listIndex[i];
-                listIndex[i]=listIndex[k];
-                listIndex[k]=aux;
-            }
-
-            for(int i=0;i<min(int(listIndex.size()),SAMPLE_SIZE_LARGE);i++){
-                samplingVecLarge.push_back(listIndex[i]);
-                indexSL[listIndex[i]]=i;
-            }
-            sort(samplingVecLarge.begin(),samplingVecLarge.end());
+        for(int i=mesh1.n-1;i>=0;i--){
+            int k = rand()%(i+1);
+            int aux = listIndex[i];
+            listIndex[i]=listIndex[k];
+            listIndex[k]=aux;
         }
+
+        for(int i=0;i<min(int(listIndex.size()),SAMPLE_SIZE);i++){
+            samplingVec.push_back(listIndex[i]);
+            indexS[listIndex[i]]=i;
+        }
+        sort(samplingVec.begin(),samplingVec.end());
     }
 
     //Loads a correspondence
     void MeshCorrespondence::loadCorr(){
         string filepath = env.pathCorr + "corr" + to_string(id1) + "_" + to_string(id2) + ".txt";
+        ifstream in (filepath);
+
+        int sz;
+        in>>sz;
+
+        corr = vector<int>(0);
+
+        for(int i=0;i<sz;i++){
+            int j;in>>j;
+            corr.push_back(j-1);
+        }
+    }
+
+    void MeshCorrespondence::loadCorrName(const string& name){
+        string filepath = env.pathCorr + name + ".txt";
         ifstream in (filepath);
 
         int sz;

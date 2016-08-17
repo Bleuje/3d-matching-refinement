@@ -16,12 +16,15 @@ namespace m3d {
 
     const int SAMPLE_SIZE = 100;
     const int SAMPLE_SIZE_LARGE = 1000;
-    const int BFS_NB_HERE = 20;
-    const int BFS_NB_THERE = 20;
+    const int BFS_NB_HERE = 500;
+    const int BFS_NB_HERE2 = 40;
+    const int BFS_NB_THERE = 40;
 
     const float DIFF_TOLERANCE = 0.02;
     const float CORRECT_TOLERANCE = 0.01;
-    const float DIFF_MAX = 0.1;
+
+    const float DIFF_MAX = 0.2;
+    const float PARAM_B = 0.1;
 
     const int CORRECT_WEIGHT = 0;
 
@@ -65,9 +68,7 @@ namespace m3d {
         int id1;
         int id2;
         Environment env;
-        vector<bool> isCorrect;
         vector<int> samplingVec;
-        vector<int> samplingVecLarge;
         map<int,int> indexS;
         map<int,int> indexSL;
         int sampleEval[SAMPLE_SIZE];
@@ -75,8 +76,10 @@ namespace m3d {
 
     public:
         MeshCorrespondence(const string& pm,const string& pc,const string& pf,const int& k1,const int& k2);
-        float simpleGlobalEval();
+        MeshCorrespondence(const string &pm, const string &pc, const string &pf,const string& corrName, const int& k1, const int& k2);
         float globalEval();
+        float globalEvalGeo();
+        double rho(const double& x,const double& y);
         double evaluate(const int& p,const set<int>& here);
         double evaluateLarge(const int& p,const set<int>& here);
         void optimize(const int& nSteps);
@@ -87,6 +90,7 @@ namespace m3d {
         void setSampling();
         void saveCorr();
         void loadCorr();
+        void loadCorrName(const string& name);
     };
 
 }
